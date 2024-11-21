@@ -58,8 +58,9 @@ class CustomView: UIView {
     }()
     
     lazy var buttonCancelCalculation: UIButton = {
-        let button = UIButton()
+        let button = UIButton(configuration: .filled())
         button.layer.cornerRadius = 20
+        button.clipsToBounds = true
         button.backgroundColor = .systemRed
         button.translatesAutoresizingMaskIntoConstraints = false
         button.isEnabled = false
@@ -82,6 +83,7 @@ class CustomView: UIView {
         addSubview(label)
         addSubview(buttonCalculation)
         addSubview(segmentControll)
+        addSubview(buttonCancelCalculation)
         
         NSLayoutConstraint.activate([
             label.topAnchor.constraint(equalTo: safeAreaLayoutGuide.topAnchor),
@@ -95,7 +97,11 @@ class CustomView: UIView {
             
             buttonCalculation.topAnchor.constraint(equalTo: label.bottomAnchor, constant: Constraints.medium.rawValue),
             buttonCalculation.leadingAnchor.constraint(equalTo: leadingAnchor, constant: Constraints.medium.rawValue),
-            buttonCalculation.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -Constraints.medium.rawValue),
+            buttonCalculation.widthAnchor.constraint(equalToConstant: (UIScreen.main.bounds.width / 2) - 20),
+            
+            buttonCancelCalculation.topAnchor.constraint(equalTo: label.bottomAnchor, constant: Constraints.medium.rawValue),
+            buttonCancelCalculation.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -Constraints.medium.rawValue),
+            buttonCancelCalculation.widthAnchor.constraint(equalToConstant: (UIScreen.main.bounds.width / 2) - 20),
             
             segmentControll.topAnchor.constraint(equalTo: buttonCalculation.bottomAnchor, constant: Constraints.large.rawValue),
             segmentControll.leadingAnchor.constraint(equalTo: leadingAnchor, constant: Constraints.medium.rawValue),

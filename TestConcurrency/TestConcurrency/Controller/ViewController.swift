@@ -17,6 +17,7 @@ class ViewController: UIViewController {
     var collectionViewDelegate: CollectionViewDelegate?
     var modelData = ModelData()
     var calculator = CalculateFormul()
+    private var currentTask: Task<Void, Never>?
     
     private lazy var actionSegmentControll: UIAction = {
         return UIAction { [weak self] _ in
@@ -28,9 +29,14 @@ class ViewController: UIViewController {
     private lazy var actionCalculation: UIAction = {
         return UIAction { [weak self] _ in
             guard let self = self else { return }
-            Task {
-                await self.calculationFactorial(n: 20)
-            }
+            self.startCalculations()
+        }
+    }()
+    
+    private lazy var actionCancelCalculation: UIAction = {
+        return UIAction { [weak self] _ in
+            guard let self = self else { return }
+            self.cancelCalculations()
         }
     }()
     
@@ -40,6 +46,7 @@ class ViewController: UIViewController {
 
     override func viewDidLoad() {
         super.viewDidLoad()
+        self.navigationController?.navigationBar.backgroundColor = .systemGroupedBackground
         self.collectionViewDataSource = CollectionViewDataSource(collectionView: customView.collectionView, photos: modelData.obtainPhoto())
         self.collectionViewDelegate = CollectionViewDelegate()
         customView.collectionView.delegate = collectionViewDelegate
@@ -63,19 +70,65 @@ class ViewController: UIViewController {
         }
     }
     
+    private func startCalculations() {
+        
+        currentTask = Task {
+            activateCancelButton()
+            await self.calculationFactorial(n: 20)
+            deactivateCancelButton()
+        }
+    }
+    
+    @MainActor
+    private func activateCancelButton() {
+        customView.buttonCancelCalculation.isEnabled = true
+    }
+    
+    @MainActor
+    private func deactivateCancelButton() {
+        customView.buttonCancelCalculation.isEnabled = false
+    }
+
+    private func cancelCalculations() {
+        currentTask?.cancel()
+        updateWithLabel(text: "Вычисления отменены")
+        updateWithProgress(progress: 0)
+    }
+    
     private func calculationFactorial(n: Int) async {
         var currentTask = 1
-       
-        currentTask += 1
+        let totalTask = n
+
         for i in 1...n {
-            let result = calculator.factorial(i)
-            DispatchQueue.main.async {
-                self.customView.label.text = "Факториал \(i) = \(result)"
+            if Task.isCancelled {
+                return
             }
+
+            let result = calculator.factorial(i)
+            updateWithLabel(text: "Факториал \(i) = \(result)")
             currentTask += 1
-            updateProgressView(currentTask: currentTask)
-            await Task.sleep(100000000)
+            let progress = Float(currentTask) / Float(totalTask)
+            updateWithProgress(progress: progress)
+
+            do {
+                try await Task.sleep(nanoseconds: 100_000_000)
+            } catch {
+                return
+            }
         }
+
+        updateWithLabel(text: "Вычисления завершены")
+    }
+    
+    
+    @MainActor
+    private func updateWithLabel(text: String) {
+        customView.label.text = text
+    }
+    
+    @MainActor
+    private func updateWithProgress(progress: Float) {
+        customView.progressView.setProgress(progress, animated: true)
     }
     
     private func setupLabel() {
@@ -87,6 +140,7 @@ class ViewController: UIViewController {
         customView.buttonCalculation.configuration?.title = titles[0]
         customView.buttonCalculation.addAction(actionCalculation, for: .touchUpInside)
         customView.buttonCancelCalculation.configuration?.title = titles[1]
+        customView.buttonCancelCalculation.addAction(actionCancelCalculation, for: .touchUpInside)
     }
     
     private func segmentDiactivate() {
